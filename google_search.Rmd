@@ -1,0 +1,81 @@
+---
+title: "Exploring my Google Search History"
+#author: "Mary van Valkenburg"
+#date: "2018"
+output: html_document
+---
+
+#### This Exploration uses my Google Search History Data for 2016 and 2017
+Your Google data can be downloaded from https://takeout.google.com/settings/takeout.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, tidy = TRUE)
+setwd("~/Desktop/googleData")
+library(ggplot2)
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(tm)
+library(wordcloud)
+library(wesanderson)
+```
+
+
+
+```{r load_data, echo=FALSE}
+load("data/dates.rda")
+load("data/searches.rda")
+```
+
+#### View Number of Searches by Month...
+
+```{r query_text}
+by_month <- date_df %>%
+    group_by(month) %>%
+    summarise(count = n())
+ggplot(by_month, aes(month, count, 
+                     label = c('Jan ', 'Feb ', 'Mar ', 'Apr ', 'May ', 'Jun ', 
+                               'Jul ', 'Aug ', 'Sep ', 'Oct ', 'Nov ', 'Dec '))) +
+    geom_col( fill = 'darkgreen') +
+    scale_x_discrete('month') +
+    geom_text(colour = 'white', angle = 90, hjust = 1) + 
+    ggtitle('Number of Google Searches by Month 2016 & 2017')
+```
+
+#### ...And by Day of the Week
+
+```{r create_corpus}
+by_wday <- date_df %>%
+    group_by(wday) %>%
+    summarise(count = n())
+ggplot(by_wday, aes(wday, count, 
+                     label = c('Sunday ', 'Monday ', 'Tuesday ', 'Wednesday ', 
+                               'Thursday ', 'Friday ', 'Saturday '))) +
+    geom_col( fill = 'darkgreen') +
+    scale_x_discrete('') +
+    geom_text(colour = 'white', angle = 90, hjust = 1) +
+    ggtitle('Number of Google Searches by Day of Week 2016 & 2017')
+```
+
+#### Top 20 Terms Appearing in My Searches
+```{r dtm}
+corp1 <- Corpus(VectorSource(search_all_query_text))
+corp1 <- tm_map(corp1, tolower)
+corp1 <- tm_map(corp1, removePunctuation)
+corp1 <- tm_map(corp1, removeWords, stopwords("english"))
+dtm <- DocumentTermMatrix(corp1)
+freq <- colSums(as.matrix(dtm))
+ordered_freq <- order(freq)
+top_20 <- freq[tail(ordered_freq, n=20)]
+print(top_20)
+```
+
+#### Making a plain wordcloud...
+```{r wordcloud_plain}
+wordcloud(dtm$dimnames$Terms, freq, min.freq = 5, max.words = 100)
+```
+
+#### ...And a fancier wordcloud
+```{r wordcloud_fancy}
+wordcloud(dtm$dimnames$Terms, freq, min.freq = 3, random.order = TRUE, colors = wes_palette(name = "FantasticFox"))
+```
